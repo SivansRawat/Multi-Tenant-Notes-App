@@ -105,7 +105,6 @@
 // module.exports = app;
 
 const express = require('express');
-const cors = require('cors');
 require('dotenv').config();
 
 const { initializeDatabase, seedDatabase } = require('./config/database');
@@ -115,34 +114,32 @@ const tenantRoutes = require('./routes/tenants');
 
 const app = express();
 
-// CORS configuration
 const allowedOrigins = [
-  'https://vercel.com/sivansrawats-projects/notes_frontend/8WvbvjAhddANMefcfB2Qsojtjbnp',
+  'https://notesfrontend-blond.vercel.app',
   'http://localhost:3000',
   'http://localhost:3001'
 ];
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like curl, Postman)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error(`CORS policy does not allow access from origin ${origin}`));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  optionsSuccessStatus: 200,
-};
+// Manual CORS middleware
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  console.log('Origin:', origin);
 
-// Apply CORS middleware
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Handle preflight OPTIONS requests
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-// Body parsers
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  next();
+});
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -170,14 +167,10 @@ app.get('/', (req, res) => {
   });
 });
 
-// Error handling middleware
+// Error handler
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
-  if (err.message && err.message.startsWith('CORS')) {
-    res.status(403).json({ error: err.message });
-  } else {
-    res.status(500).json({ error: 'Internal server error' });
-  }
+  res.status(500).json({ error: 'Internal server error' });
 });
 
 // 404 handler
@@ -185,32 +178,47 @@ app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// Database initialization and server start
 let isDbInitialized = false;
 
-const startServer = async () => {
-  try {
+// Serverless handler for Vercel
+const handler = async (req, res) => {
+  if (!isDbInitialized) {
+    console.log('Initializing database...');
+    await initializeDatabase();
+    await seedDatabase();
+    isDbInitialized = true;
+  }
+
+  // Handle OPTIONS preflight explicitly for Vercel
+  if (req.method === 'OPTIONS') {
+    const origin = req.headers.origin;
+    if (allowedOrigins.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.status(200).end();
+    return;
+  }
+
+  return app(req, res);
+};
+
+module.exports = handler;
+
+// If running locally, start server normally
+if (require.main === module) {
+  (async () => {
     if (!isDbInitialized) {
-      console.log('Initializing database...');
       await initializeDatabase();
       await seedDatabase();
       isDbInitialized = true;
     }
-
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
       console.log(`Health check: http://localhost:${PORT}/health`);
     });
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
-  }
-};
-
-// Start server if running directly
-if (require.main === module) {
-  startServer();
+  })();
 }
-
-module.exports = app;
