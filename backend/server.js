@@ -132,7 +132,7 @@ const corsOptions = {
 
     // In production, allow specific origins
     const allowedOrigins = [
-      'https://notesfrontend-blond.vercel.app', // <-- Update this to your actual frontend domain
+      'https://notesfrontend-blond.vercel.app/login', // <-- Update this to your actual frontend domain
       'http://localhost:3000',
       'http://localhost:3001'
     ];
