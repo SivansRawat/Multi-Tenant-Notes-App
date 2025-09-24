@@ -1,0 +1,330 @@
+.upgrade-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.upgrade-modal {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+  width: 100%;
+  max-width: 700px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.upgrade-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 24px 0 24px;
+  margin-bottom: 24px;
+}
+
+.upgrade-modal-header h2 {
+  margin: 0;
+  color: #333;
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #666;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.close-button:hover {
+  background-color: #f8f9fa;
+  color: #333;
+}
+
+.upgrade-modal-content {
+  padding: 0 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.current-plan {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.current-plan h3 {
+  margin: 0 0 12px 0;
+  color: #1976d2;
+  font-size: 1.2rem;
+}
+
+.plan-stats {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 16px;
+  color: #333;
+  font-weight: 600;
+}
+
+.plans-comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.plan-card {
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  padding: 20px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.plan-card.current {
+  border-color: #1976d2;
+  background-color: #f8f9fa;
+}
+
+.plan-card.pro {
+  border-color: #667eea;
+  background: linear-gradient(135deg, #f8f9ff 0%, #e8f5e8 100%);
+  transform: scale(1.05);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+}
+
+.plan-header {
+  text-align: center;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.plan-header h4 {
+  margin: 0 0 8px 0;
+  color: #333;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.plan-price {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #667eea;
+}
+
+.plan-badge {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  transform: rotate(15deg);
+}
+
+.plan-features {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.feature {
+  font-size: 14px;
+  padding: 4px 0;
+}
+
+.upgrade-benefits {
+  background-color: #f8f9fa;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.upgrade-benefits h3 {
+  margin: 0 0 16px 0;
+  color: #333;
+  font-size: 1.2rem;
+}
+
+.upgrade-benefits ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.upgrade-benefits li {
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.admin-notice {
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  border: 1px solid #ffeaa7;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.admin-notice p {
+  margin: 0;
+  color: #856404;
+  font-weight: 500;
+}
+
+.error-message {
+  background-color: #fee;
+  border: 1px solid #fcc;
+  color: #c33;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.upgrade-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding: 24px;
+  border-top: 1px solid #e9ecef;
+}
+
+.cancel-button {
+  padding: 12px 24px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.cancel-button:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+.upgrade-button {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: transform 0.2s ease;
+}
+
+.upgrade-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.upgrade-button:disabled,
+.cancel-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .upgrade-modal-overlay {
+    padding: 10px;
+  }
+
+  .upgrade-modal {
+    max-height: 95vh;
+  }
+
+  .upgrade-modal-header {
+    padding: 20px 20px 0 20px;
+  }
+
+  .upgrade-modal-header h2 {
+    font-size: 1.5rem;
+  }
+
+  .upgrade-modal-content {
+    padding: 0 20px;
+  }
+
+  .plans-comparison {
+    grid-template-columns: 1fr;
+  }
+
+  .plan-card.pro {
+    transform: none;
+  }
+
+  .plan-stats {
+    gap: 16px;
+  }
+
+  .upgrade-modal-actions {
+    flex-direction: column-reverse;
+    padding: 20px;
+  }
+
+  .cancel-button,
+  .upgrade-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .upgrade-modal-header {
+    padding: 16px 16px 0 16px;
+  }
+
+  .upgrade-modal-content {
+    padding: 0 16px;
+  }
+
+  .upgrade-modal-actions {
+    padding: 16px;
+  }
+
+  .current-plan,
+  .upgrade-benefits {
+    padding: 16px;
+  }
+
+  .plan-card {
+    padding: 16px;
+  }
+}

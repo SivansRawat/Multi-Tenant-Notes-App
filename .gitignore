@@ -1,0 +1,49 @@
+# Node.js dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment variable files
+.env
+.env.*
+!.env.example   # allow templates for reference
+
+# Log files
+*.log
+
+# Mac/Windows system files
+.DS_Store
+Thumbs.db
+
+# Optional Vercel and Next.js outputs
+.vercel/
+.next/
+out/
+dist/
+
+# Build cache
+.cache/
+coverage/
+
+# Editor/temp files
+.vscode/
+.idea/
+*.swp
+
+# Prisma
+/backend/prisma/dev.db
+/backend/prisma/.env
+
+# Frontend
+/frontend/.env
+/frontend/.env.local
+/frontend/.next
+/frontend/node_modules
+/backend/node_modules
+/backend/.env.local
+/backend/.env.production
+
+# Misc
+.gitkeep
