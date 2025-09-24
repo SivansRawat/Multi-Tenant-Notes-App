@@ -117,7 +117,7 @@ const app = express();
 
 // CORS configuration
 const allowedOrigins = [
-  'https://notesfrontend-blond.vercel.app',
+  'https://vercel.com/sivansrawats-projects/notes_frontend/8WvbvjAhddANMefcfB2Qsojtjbnp',
   'http://localhost:3000',
   'http://localhost:3001'
 ];
