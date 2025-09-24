@@ -103,9 +103,7 @@
 // }
 
 // module.exports = app;
-
 const express = require('express');
-const cors = require('cors');
 require('dotenv').config();
 
 const { initializeDatabase, seedDatabase } = require('./config/database');
@@ -115,29 +113,29 @@ const tenantRoutes = require('./routes/tenants');
 
 const app = express();
 
-// -------------------- CORS CONFIG --------------------
-const allowedOrigins = [
-  'https://notesfrontend-blond.vercel.app', // deployed frontend
-  'http://localhost:3000',
-  'http://localhost:3001'
-];
+// -------------------- CORS FIX --------------------
+app.use((req, res, next) => {
+  const allowedOrigins = [
+    'https://notesfrontend-blond.vercel.app',
+    'http://localhost:3000',
+    'http://localhost:3001'
+  ];
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    return callback(new Error(`CORS policy does not allow access from ${origin}`));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  optionsSuccessStatus: 200
-};
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
 
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -166,11 +164,7 @@ app.get('/', (req, res) => {
 // -------------------- ERROR HANDLING --------------------
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
-  if (err.message && err.message.startsWith('CORS')) {
-    res.status(403).json({ error: err.message });
-  } else {
-    res.status(500).json({ error: 'Internal server error' });
-  }
+  res.status(500).json({ error: 'Internal server error' });
 });
 
 app.use('*', (req, res) => {
