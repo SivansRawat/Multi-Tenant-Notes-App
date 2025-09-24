@@ -104,7 +104,12 @@
 
 // module.exports = app;
 
+
+
+
 const express = require('express');
+const jwt = require('jsonwebtoken');
+const cors = require('cors');
 require('dotenv').config();
 
 const { initializeDatabase, seedDatabase } = require('./config/database');
@@ -120,35 +125,33 @@ const allowedOrigins = [
   'http://localhost:3001'
 ];
 
-// Manual CORS middleware
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  console.log('Origin:', origin);
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); // Allow tools like Postman
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS not allowed for origin ${origin}`));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  optionsSuccessStatus: 200,
+};
 
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  }
-  
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
-  next();
-});
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Handle OPTIONS preflight
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Health check endpoint
+// Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// API routes
+// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/notes', notesRoutes);
 app.use('/api/tenants', tenantRoutes);
@@ -162,15 +165,25 @@ app.get('/', (req, res) => {
       health: '/health',
       auth: '/api/auth',
       notes: '/api/notes',
-      tenants: '/api/tenants'
-    }
+      tenants: '/api/tenants',
+    },
   });
 });
 
 // Error handler
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
-  res.status(500).json({ error: 'Internal server error' });
+  // Always send CORS headers on errors too
+  res.set('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.set('Access-Control-Allow-Credentials', 'true');
+  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+
+  if (err.message && err.message.startsWith('CORS')) {
+    res.status(403).json({ error: err.message });
+  } else {
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // 404 handler
@@ -180,7 +193,7 @@ app.use('*', (req, res) => {
 
 let isDbInitialized = false;
 
-// Serverless handler for Vercel
+// Start server handler for Vercel serverless
 const handler = async (req, res) => {
   if (!isDbInitialized) {
     console.log('Initializing database...');
@@ -189,25 +202,24 @@ const handler = async (req, res) => {
     isDbInitialized = true;
   }
 
-  // Handle OPTIONS preflight explicitly for Vercel
+  // Explicitly respond to OPTIONS preflight for Vercel
   if (req.method === 'OPTIONS') {
     const origin = req.headers.origin;
     if (allowedOrigins.includes(origin)) {
       res.setHeader('Access-Control-Allow-Origin', origin);
     }
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.status(200).end();
     return;
   }
-
   return app(req, res);
 };
 
 module.exports = handler;
 
-// If running locally, start server normally
+// For local testing with standalone server
 if (require.main === module) {
   (async () => {
     if (!isDbInitialized) {
