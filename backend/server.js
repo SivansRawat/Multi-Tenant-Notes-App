@@ -107,130 +107,47 @@
 
 
 
-const express = require('express');
-const jwt = require('jsonwebtoken');
-const cors = require('cors');
 require('dotenv').config();
-
 const { initializeDatabase, seedDatabase } = require('./config/database');
 const authRoutes = require('./routes/auth');
 const notesRoutes = require('./routes/notes');
 const tenantRoutes = require('./routes/tenants');
 
-const app = express();
-
-const allowedOrigins = [
-  'https://notesfrontend-blond.vercel.app',
-  'http://localhost:3000',
-  'http://localhost:3001'
-];
-
-const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true); // Allow tools like Postman
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error(`CORS not allowed for origin ${origin}`));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  optionsSuccessStatus: 200,
-};
-
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Handle OPTIONS preflight
-
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
-
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/notes', notesRoutes);
-app.use('/api/tenants', tenantRoutes);
-
-// Root endpoint
-app.get('/', (req, res) => {
-  res.json({
-    message: 'Multi-Tenant SaaS Notes API',
-    version: '1.0.0',
-    endpoints: {
-      health: '/health',
-      auth: '/api/auth',
-      notes: '/api/notes',
-      tenants: '/api/tenants',
-    },
-  });
-});
-
-// Error handler
-app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
-  // Always send CORS headers on errors too
-  res.set('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.set('Access-Control-Allow-Credentials', 'true');
-  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  res.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-
-  if (err.message && err.message.startsWith('CORS')) {
-    res.status(403).json({ error: err.message });
-  } else {
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({ error: 'Route not found' });
-});
-
 let isDbInitialized = false;
 
-// Start server handler for Vercel serverless
-const handler = async (req, res) => {
+// Initialize DB once per cold start
+const initDb = async () => {
   if (!isDbInitialized) {
-    console.log('Initializing database...');
     await initializeDatabase();
     await seedDatabase();
     isDbInitialized = true;
   }
-
-  // Explicitly respond to OPTIONS preflight for Vercel
-  if (req.method === 'OPTIONS') {
-    const origin = req.headers.origin;
-    if (allowedOrigins.includes(origin)) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-    }
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.status(200).end();
-    return;
-  }
-  return app(req, res);
 };
 
-module.exports = handler;
+// Vercel serverless handler
+module.exports = async (req, res) => {
+  await initDb();
 
-// For local testing with standalone server
-if (require.main === module) {
-  (async () => {
-    if (!isDbInitialized) {
-      await initializeDatabase();
-      await seedDatabase();
-      isDbInitialized = true;
-    }
-    const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-      console.log(`Health check: http://localhost:${PORT}/health`);
+  // -------------------- ROUTES --------------------
+  if (req.url.startsWith('/api/auth')) {
+    return authRoutes(req, res);
+  } else if (req.url.startsWith('/api/notes')) {
+    return notesRoutes(req, res);
+  } else if (req.url.startsWith('/api/tenants')) {
+    return tenantRoutes(req, res);
+  } else if (req.url === '/' || req.url === '/health') {
+    return res.status(200).json({
+      message: 'Multi-Tenant SaaS Notes API',
+      version: '1.0.0',
+      endpoints: {
+        health: '/health',
+        auth: '/api/auth',
+        notes: '/api/notes',
+        tenants: '/api/tenants'
+      }
     });
-  })();
-}
+  }
+
+  return res.status(404).json({ error: 'Route not found' });
+};
+
