@@ -104,9 +104,8 @@
 
 // module.exports = app;
 
-
-
 const express = require('express');
+const cors = require('cors');
 require('dotenv').config();
 
 const { initializeDatabase, seedDatabase } = require('./config/database');
@@ -115,48 +114,42 @@ const notesRoutes = require('./routes/notes');
 const tenantRoutes = require('./routes/tenants');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
 // -------------------- CORS CONFIG --------------------
 const allowedOrigins = [
   'https://notesfrontend-blond.vercel.app', // deployed frontend
-  'http://localhost:3000', // local dev
+  'http://localhost:3000',
   'http://localhost:3001'
 ];
 
-// Manual CORS middleware (always adds headers)
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-  }
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  res.header('Access-Control-Allow-Credentials', 'true');
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS policy does not allow access from ${origin}`));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  optionsSuccessStatus: 200
+};
 
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200); // ✅ respond immediately to preflight
-  }
-  next();
-});
-
-// Middleware
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // -------------------- ROUTES --------------------
-
-// Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/notes', notesRoutes);
 app.use('/api/tenants', tenantRoutes);
 
-// Root endpoint
 app.get('/', (req, res) => {
   res.json({
     message: 'Multi-Tenant SaaS Notes API',
@@ -180,31 +173,21 @@ app.use((err, req, res, next) => {
   }
 });
 
-// 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// -------------------- DB INIT + SERVER START --------------------
-const startServer = async () => {
-  try {
+// -------------------- EXPORT FOR VERCEL --------------------
+let isDbInitialized = false;
+
+const handler = async (req, res) => {
+  if (!isDbInitialized) {
     console.log('Initializing database...');
     await initializeDatabase();
     await seedDatabase();
-
-    app.listen(PORT, () => {
-      console.log(`✅ Server running on port ${PORT}`);
-      console.log(`🔍 Health check: http://localhost:${PORT}/health`);
-    });
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
+    isDbInitialized = true;
   }
+  return app(req, res);
 };
 
-// Only start server if this file is run directly
-if (require.main === module) {
-  startServer();
-}
-
-module.exports = app;
+module.exports = handler;
