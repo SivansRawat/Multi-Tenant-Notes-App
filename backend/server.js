@@ -105,8 +105,6 @@
 // module.exports = app;
 
 
-
-
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
@@ -130,9 +128,9 @@ const corsOptions = {
       return callback(null, true);
     }
 
-    // In production, allow specific origins
+    // In production, allow specific origins (without paths)
     const allowedOrigins = [
-      'https://notesfrontend-blond.vercel.app/login', // <-- Update this to your actual frontend domain
+      'https://notesfrontend-blond.vercel.app',
       'http://localhost:3000',
       'http://localhost:3001'
     ];
@@ -151,6 +149,7 @@ const corsOptions = {
 
 // Middleware
 app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Handle preflight OPTIONS requests
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
