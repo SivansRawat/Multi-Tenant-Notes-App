@@ -103,7 +103,9 @@
 // }
 
 // module.exports = app;
+
 const express = require('express');
+const cors = require('cors');
 require('dotenv').config();
 
 const { initializeDatabase, seedDatabase } = require('./config/database');
@@ -113,41 +115,48 @@ const tenantRoutes = require('./routes/tenants');
 
 const app = express();
 
-// -------------------- CORS FIX --------------------
-app.use((req, res, next) => {
-  const allowedOrigins = [
-    'https://notesfrontend-blond.vercel.app',
-    'http://localhost:3000',
-    'http://localhost:3001'
-  ];
+// CORS configuration
+const allowedOrigins = [
+  'https://notesfrontend-blond.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:3001'
+];
 
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  }
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like curl, Postman)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS policy does not allow access from origin ${origin}`));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  optionsSuccessStatus: 200,
+};
 
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
+// Apply CORS middleware
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Handle preflight OPTIONS requests
 
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  next();
-});
-
+// Body parsers
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// -------------------- ROUTES --------------------
+// Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/notes', notesRoutes);
 app.use('/api/tenants', tenantRoutes);
 
+// Root endpoint
 app.get('/', (req, res) => {
   res.json({
     message: 'Multi-Tenant SaaS Notes API',
@@ -161,27 +170,47 @@ app.get('/', (req, res) => {
   });
 });
 
-// -------------------- ERROR HANDLING --------------------
+// Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
-  res.status(500).json({ error: 'Internal server error' });
+  if (err.message && err.message.startsWith('CORS')) {
+    res.status(403).json({ error: err.message });
+  } else {
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
+// 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// -------------------- EXPORT FOR VERCEL --------------------
+// Database initialization and server start
 let isDbInitialized = false;
 
-const handler = async (req, res) => {
-  if (!isDbInitialized) {
-    console.log('Initializing database...');
-    await initializeDatabase();
-    await seedDatabase();
-    isDbInitialized = true;
+const startServer = async () => {
+  try {
+    if (!isDbInitialized) {
+      console.log('Initializing database...');
+      await initializeDatabase();
+      await seedDatabase();
+      isDbInitialized = true;
+    }
+
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+      console.log(`Health check: http://localhost:${PORT}/health`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
   }
-  return app(req, res);
 };
 
-module.exports = handler;
+// Start server if running directly
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = app;
