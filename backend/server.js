@@ -104,7 +104,6 @@
 
 // module.exports = app;
 
-
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
@@ -117,29 +116,21 @@ const tenantRoutes = require('./routes/tenants');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// CORS configuration for Vercel deployment
+// -------------------- CORS CONFIG --------------------
+const allowedOrigins = [
+  'https://notesfrontend-blond.vercel.app', // deployed frontend
+  'http://localhost:3000', // local dev
+  'http://localhost:3001'
+];
+
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-
-    // Allow all origins in development
-    if (process.env.NODE_ENV !== 'production') {
+    if (!origin) return callback(null, true); // allow curl, mobile apps, etc.
+    if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
-
-    // In production, allow specific origins (without paths)
-    const allowedOrigins = [
-      'https://notesfrontend-blond.vercel.app',
-      'http://localhost:3000',
-      'http://localhost:3001'
-    ];
-
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error(`CORS policy does not allow access from origin ${origin}`));
-    }
+    console.error(`❌ CORS blocked request from: ${origin}`);
+    return callback(new Error(`CORS policy does not allow access from ${origin}`));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -149,9 +140,11 @@ const corsOptions = {
 
 // Middleware
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Handle preflight OPTIONS requests
+app.options('*', cors(corsOptions)); // handle preflight requests
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// -------------------- ROUTES --------------------
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -177,7 +170,7 @@ app.get('/', (req, res) => {
   });
 });
 
-// Error handling middleware
+// -------------------- ERROR HANDLING --------------------
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
   if (err.message && err.message.startsWith('CORS')) {
@@ -192,7 +185,7 @@ app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// Initialize database and start server
+// -------------------- DB INIT + SERVER START --------------------
 const startServer = async () => {
   try {
     console.log('Initializing database...');
@@ -200,8 +193,8 @@ const startServer = async () => {
     await seedDatabase();
 
     app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-      console.log(`Health check: http://localhost:${PORT}/health`);
+      console.log(`✅ Server running on port ${PORT}`);
+      console.log(`🔍 Health check: http://localhost:${PORT}/health`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
@@ -209,7 +202,7 @@ const startServer = async () => {
   }
 };
 
-// Start the server
+// Only start server if this file is run directly
 if (require.main === module) {
   startServer();
 }
