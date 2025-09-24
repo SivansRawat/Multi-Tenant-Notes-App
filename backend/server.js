@@ -104,8 +104,9 @@
 
 // module.exports = app;
 
+
+
 const express = require('express');
-const cors = require('cors');
 require('dotenv').config();
 
 const { initializeDatabase, seedDatabase } = require('./config/database');
@@ -123,24 +124,23 @@ const allowedOrigins = [
   'http://localhost:3001'
 ];
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true); // allow curl, mobile apps, etc.
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    console.error(`❌ CORS blocked request from: ${origin}`);
-    return callback(new Error(`CORS policy does not allow access from ${origin}`));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  optionsSuccessStatus: 200,
-};
+// Manual CORS middleware (always adds headers)
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.header('Access-Control-Allow-Credentials', 'true');
+
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200); // ✅ respond immediately to preflight
+  }
+  next();
+});
 
 // Middleware
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // handle preflight requests
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
